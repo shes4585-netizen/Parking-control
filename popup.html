@@ -121,7 +121,7 @@
 
     <div class="grid-container">
         <table class="grid-table" id="warnGrid">
-            </table>
+        </table>
     </div>
 
     <script>
@@ -153,6 +153,11 @@
             const matchArea = document.getElementById("liveMatchArea");
             
             if(resetTimeout) { clearTimeout(resetTimeout); resetTimeout = null; }
+
+            // 🚨 부모 메인창(index.html)으로 실시간 동기화 문자 전송 (빈 값일 때도 그대로 실시간 전송 처리됨)
+            if (window.opener) {
+                window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: carNum }, "*");
+            }
 
             if (carNum.length === 0) {
                 matchArea.innerHTML = "";
@@ -203,11 +208,6 @@
                 }
             }
 
-            // 🚨 부모 메인창(index.html)으로 실시간 동기화 문자 전송
-            if (window.opener) {
-                window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: carNum }, "*");
-            }
-
             // 4자리가 가득 차면 4초 뒤 입력란 및 매칭 영역을 대기상태로 클리어
             if (carNum.length === 4) {
                 resetTimeout = setTimeout(() => {
@@ -215,6 +215,11 @@
                     matchArea.innerHTML = "";
                     document.getElementById("sirenImg").src = "100.png";
                     inputField.focus();
+                    
+                    // 🚨 4초 자동 초기화 시점에도 메인창(index.html) 검색 조건을 초기화(모든 레코드 노출) 시킵니다.
+                    if (window.opener) {
+                        window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: "" }, "*");
+                    }
                 }, 4000); 
             }
         }
