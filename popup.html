@@ -154,14 +154,22 @@
             
             if(resetTimeout) { clearTimeout(resetTimeout); resetTimeout = null; }
 
-            // 🚨 부모 메인창(index.html)으로 실시간 동기화 문자 전송 (빈 값일 때도 그대로 실시간 전송 처리됨)
+            // 🚨 부모 메인창(index.html)으로 실시간 동기화 문자 전송
             if (window.opener) {
                 window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: carNum }, "*");
             }
 
+            // 🚨 [보정 추가] 글자가 아예 없을 때 깃허브 딜레이로 잔상 남는 현상 방지
             if (carNum.length === 0) {
                 matchArea.innerHTML = "";
                 document.getElementById("sirenImg").src = "100.png";
+                
+                // 0.01초 뒤에 한 번 더 확실하게 메인창을 공백으로 밀어버림 (잔상 파괴)
+                setTimeout(() => {
+                    if (window.opener) {
+                        window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: "" }, "*");
+                    }
+                }, 10);
                 return;
             }
 
