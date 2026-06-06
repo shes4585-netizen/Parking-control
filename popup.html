@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>모니터링</title> 
+    <link rel="icon" href="100.png" type="image/png">
+    <style>
+        body { 
+            font-family: 'Malgun Gothic', sans-serif; 
+            background-color: #ffffff; /* 🚨 배경색 흰색 */
+            color: #000000; /* 글자색 검은색 */
+            margin: 0; padding: 10px; 
+            display: flex; flex-direction: column;
+            align-items: center;
+            overflow: hidden; 
+            height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .main-container { 
+            display: flex; flex-direction: row; 
+            align-items: center; justify-content: center; 
+            gap: 10px; width: 100%; box-sizing: border-box; 
+        }
+
+        .siren-box { 
+            width: 40px; height: 40px; 
+            display: flex; justify-content: center; align-items: center; flex-shrink: 0; 
+        }
+        .siren-box img { width: 100%; height: 100%; object-fit: contain; }
+
+        input { 
+            width: 110px; height: 35px; padding: 3px; 
+            font-size: 16px; font-weight: bold; text-align: center; 
+            border: 1px solid #ccc; border-radius: 4px; 
+            background-color: #ffffff; color: #000000;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2); 
+        }
+        input:focus { outline: none; border-color: #1a365d; } 
+        
+        /* 입력창 아래 실시간 매칭 번호 나열 영역 (비고 필드 삭제됨) */
+        .live-match-container { 
+            margin-top: 8px; 
+            width: 100%; 
+            min-height: 55px; 
+            max-height: 55px;
+            overflow-y: auto;
+            text-align: center; 
+            font-size: 14px; 
+            font-weight: bold;
+            line-height: 1.4;
+            box-sizing: border-box;
+            padding: 2px;
+        }
+
+        /* 주의필드가 yes(true)인 차량번호 빨간색 점멸 스타일 */
+        .blink-warn {
+            color: #e53e3e !important; 
+            font-weight: 900;
+            animation: textBlink 0.4s infinite alternate;
+        }
+        @keyframes textBlink {
+            0% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
+
+        /* 일반 매칭 차량 스타일 */
+        .normal-match {
+            color: #2b6cb0;
+            font-weight: bold;
+            display: inline-block;
+            margin: 0 4px;
+        }
+
+        /* 하단 2열 5행 주의 차량 전용 판 스타일 */
+        .grid-container {
+            width: 100%; 
+            flex-grow: 1;
+            margin-top: 5px;
+            background-color: #ffffff; 
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .grid-table {
+            width: 100%;
+            height: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+            border: none !important; 
+        }
+
+        .grid-table td {
+            border: none !important; 
+            text-align: center;
+            font-size: 14px;
+            font-weight: bold;
+            color: #000000;
+            vertical-align: middle;
+            padding: 2px;
+        }
+
+        /* 빨간 구슬 말머리 */
+        .bead {
+            color: #e53e3e;
+            margin-right: 3px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="main-container">
+        <div class="siren-box">
+            <img id="sirenImg" src="100.png" alt="경광등">
+        </div>
+        <input type="text" id="popSearch" placeholder="번호 입력" maxlength="4" oninput="liveSearch()" autofocus>
+    </div>
+    
+    <div id="liveMatchArea" class="live-match-container"></div>
+
+    <div class="grid-container">
+        <table class="grid-table" id="warnGrid">
+            </table>
+    </div>
+
+    <script>
+        let resetTimeout = null; 
+
+        // 🚨 [크기 강제 교정] 브라우저 창틀 크기를 계산하여 내부 화면 영역을 정확히 가로 230px, 세로 380px로 세팅
+        function enforceWindowSize() {
+            const targetWidth = 230;
+            const targetHeight = 380;
+            
+            const widthDiff = window.outerWidth - window.innerWidth;
+            const heightDiff = window.outerHeight - window.innerHeight;
+            
+            window.resizeTo(targetWidth + widthDiff, targetHeight + heightDiff);
+        }
+
+        // 시작 시 크기를 맞추고 하단 2열 5행 판을 구성합니다.
+        document.addEventListener("DOMContentLoaded", () => {
+            enforceWindowSize(); 
+            updateWarnGrid();   
+        });
+
+        // 🚨 1글자 누를 때마다 실시간으로 작동하는 차량 검색 시스템
+        function liveSearch() {
+            const inputField = document.getElementById("popSearch");
+            inputField.value = inputField.value.trim().replace(/[^0-9]/g, ""); // 숫자만 수용
+            const carNum = inputField.value;
+
+            const matchArea = document.getElementById("liveMatchArea");
+            
+            if(resetTimeout) { clearTimeout(resetTimeout); resetTimeout = null; }
+
+            if (carNum.length === 0) {
+                matchArea.innerHTML = "";
+                document.getElementById("sirenImg").src = "100.png";
+                return;
+            }
+
+            let localData = [];
+            try { localData = JSON.parse(localStorage.getItem("carData")) || []; } catch(e) {}
+
+            let matches = [];
+            localData.forEach(item => {
+                if (item.number) {
+                    const lastFour = item.number.replace(/[^0-9]/g, "").slice(-4);
+                    if (lastFour.includes(carNum)) {
+                        matches.push(item);
+                    }
+                }
+            });
+
+            // 매칭 결과 화면 표출 로직
+            if (matches.length === 0) {
+                // 🚨 일치 항목이 전혀 없으면 "매칭 이력없음" 출력
+                matchArea.innerHTML = `<span style="color: #718096;">매칭 이력없음</span>`;
+                document.getElementById("sirenImg").src = "100.png";
+            } else {
+                matchArea.innerHTML = "";
+                let hasWarn = false;
+
+                matches.forEach(item => {
+                    const lastFour = item.number.replace(/[^0-9]/g, "").slice(-4);
+                    const isWarnCar = (item.isWarn === true || item.isWarn === "true" || item.isWarn === "Y" || item.isWarn === "yes");
+                    
+                    if (isWarnCar) {
+                        // 🚨 주의가 yes인 경우 빨간색 점멸 글씨 처리
+                        matchArea.innerHTML += `<span class="blink-warn">${lastFour}</span> `;
+                        hasWarn = true;
+                    } else {
+                        // 주의가 아닌 일반 차량 번호 시인성 있게 출력
+                        matchArea.innerHTML += `<span class="normal-match">${lastFour}</span> `;
+                    }
+                });
+
+                if (hasWarn) {
+                    document.getElementById("sirenImg").src = "100-3.gif";
+                } else {
+                    document.getElementById("sirenImg").src = "100.png";
+                }
+            }
+
+            // 🚨 부모 메인창(index.html)으로 실시간 동기화 문자 전송
+            if (window.opener) {
+                window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: carNum }, "*");
+            }
+
+            // 4자리가 가득 차면 4초 뒤 입력란 및 매칭 영역을 대기상태로 클리어
+            if (carNum.length === 4) {
+                resetTimeout = setTimeout(() => {
+                    inputField.value = "";
+                    matchArea.innerHTML = "";
+                    document.getElementById("sirenImg").src = "100.png";
+                    inputField.focus();
+                }, 4000); 
+            }
+        }
+
+        // 🚨 최하단에 주의 필드가 yes인 목록을 테두리 없이 2열 5행 판으로 채워주는 함수
+        function updateWarnGrid() {
+            let localData = [];
+            try { localData = JSON.parse(localStorage.getItem("carData")) || []; } catch(e) {}
+
+            // 주의 필드가 true/yes/Y 인 항목만 걸러내어 최신등록 순 정렬
+            const warnCars = localData.filter(item => {
+                return item.isWarn === true || item.isWarn === "true" || item.isWarn === "Y" || item.isWarn === "yes";
+            }).reverse();
+
+            const gridTable = document.getElementById("warnGrid");
+            gridTable.innerHTML = ""; 
+
+            let dataIndex = 0;
+            for (let i = 0; i < 5; i++) {
+                const tr = document.createElement("tr");
+                for (let j = 0; j < 2; j++) {
+                    const td = document.createElement("td");
+                    
+                    if (dataIndex < warnCars.length) {
+                        const lastFour = warnCars[dataIndex].number.replace(/[^0-9]/g, "").slice(-4);
+                        // 빨간 구슬(🔴) 말머리와 함께 번호 안착
+                        td.innerHTML = `<span class="bead">🔴</span>${lastFour}`;
+                        dataIndex++;
+                    } else {
+                        td.innerHTML = "&nbsp;"; 
+                    }
+                    tr.appendChild(td);
+                }
+                gridTable.appendChild(tr);
+            }
+        }
+    </script>
+</body>
+</html>

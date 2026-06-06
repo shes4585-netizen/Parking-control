@@ -1,0 +1,838 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>진입로 위반차량 검색 시스템</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body { font-family: 'Malgun Gothic', sans-serif; padding: 25px; background-color: #f5f7fa; position: relative; }
+        h2 { color: #1a365d; margin-bottom: 20px; display: flex; align-items: center; gap: 15px; }
+        
+        /* 🚔 뱃지 스타일 로고 */
+        h2 i.logo-icon { color: #102a43; font-size: 1.2em; } 
+        
+        .header-logo-box {
+            position: absolute; top: 20px; right: 25px; display: flex; align-items: center; gap: 10px;
+            background: linear-gradient(135deg, #1a365d, #2a4365); padding: 8px 15px; border-radius: 20px;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1); color: white;
+        }
+        .header-logo-box i { font-size: 18px; color: #f6ad55; }
+        .header-logo-box .logo-text { font-size: 13px; font-weight: bold; letter-spacing: 0.5px; }
+
+        .section { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); margin-bottom: 20px; }
+        .form-group { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+        
+        .form-label-group { display: flex; flex-direction: column; gap: 4px; }
+        .form-label-group label { font-size: 11px; font-weight: bold; color: #4a5568; padding-left: 2px; }
+
+        /* 📻 라디오 버튼 커스텀 스타일 */
+        .radio-group { display: flex; gap: 12px; padding: 8px 10px; background: #edf2f7; border-radius: 4px; height: 38px; box-sizing: border-box; align-items: center; }
+        .radio-label { font-size: 13px !important; font-weight: bold; color: #2d3748; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+        .radio-label input { margin: 0; cursor: pointer; width: auto; height: auto; padding: 0; }
+
+        /* 🏷️ 테이블 내 구분 뱃지 스타일 */
+        .badge { display: inline-block; padding: 3px 8px; font-size: 12px; font-weight: bold; border-radius: 4px; }
+        .badge-member { background-color: #ebf8ff; color: #2b6cb0; border: 1px solid #bee3f8; }
+        .badge-normal { background-color: #f7fafc; color: #4a5568; border: 1px solid #e2e8f0; }
+
+        input, select { padding: 10px; font-size: 14px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background-color: white; }
+        .input-search { border: 2px solid #1a365d; font-size: 16px; width: 280px; font-weight: bold; }
+        .edit-input { width: 100%; padding: 4px; font-size: 13px; border: 1px solid #3182ce; border-radius: 4px; text-align: center; }
+        .edit-input-note { text-align: left; padding-left: 8px; }
+        
+        /* 테이블 안쪽 에디터 폼 정렬용 */
+        .edit-datetime-container { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+        .edit-time-selects { display: flex; gap: 2px; width: 100%; }
+        .edit-time-selects select { padding: 2px; font-size: 12px; height: 24px; flex: 1; text-align: center; }
+
+        button { padding: 10px 15px; font-size: 14px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn-add { background-color: #2b6cb0; color: white; height: 41px; margin-top: 15px; }
+        .btn-add:hover { background-color: #2c5282; }
+        
+        .btn-popup-open { background-color: #e53e3e; color: white; font-size: 15px; box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        .btn-popup-open:hover { background-color: #9b2c2c; }
+
+        .btn-edit { background-color: #dd6b20; color: white; padding: 5px 8px; font-size: 12px; margin-right: 2px; }
+        .btn-save { background-color: #3182ce; color: white; padding: 5px 8px; font-size: 12px; margin-right: 2px; }
+        .btn-cancel { background-color: #718096; color: white; padding: 5px 8px; font-size: 12px; margin-right: 2px; }
+        .btn-del { background-color: #e53e3e; color: white; padding: 5px 8px; font-size: 12px; }
+        
+        .btn-backup { background-color: #4a5568; color: white; margin-right: 5px; }
+        .btn-backup:hover { background-color: #2d3748; }
+        .btn-restore { background-color: #805ad5; color: white; }
+        .file-label { display: inline-block; padding: 10px 15px; background-color: #dd6b20; color: white; font-size: 14px; font-weight: bold; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; background-color: white; }
+        
+        th, td { border: 1px solid #cbd5e0; padding: 8px 4px; text-align: center; font-size: 13px; word-break: break-all; vertical-align: middle; }
+        th { background-color: #2d3748; color: white; font-weight: bold; }
+        tr:nth-child(even) { background-color: #f7fafc; }
+        
+        /* 🚨 주의 헤더 스타일 */
+        th.th-warn { background-color: #742a2a; cursor: pointer; user-select: none; position: relative; }
+        th.th-warn:hover { background-color: #9b2c2c; }
+        th.th-warn i { margin-left: 3px; font-size: 11px; color: #feb2b2; }
+
+        /* 줄 전체 배경색 강조 고정 */
+        .row-focus td { 
+            background-color: #fbd38d !important; 
+            color: #1a202c !important;            
+            font-weight: bold !important; 
+        }
+
+        .col-warn  { width: 55px; } 
+        .col-type  { width: 75px; }   
+        .col-time  { width: 125px; }   
+        .col-time-edit { width: 155px; }
+        .col-car   { width: 110px; }  
+        .col-dong  { width: 55px; }   
+        .col-ho     { width: 55px; }   
+        .col-stay  { width: 90px; font-weight: bold; }
+        .col-action { width: 100px; } 
+        .col-note-content { text-align: left !important; padding-left: 10px; }
+
+        .no-result { color: #e53e3e; font-weight: bold; margin-top: 15px; font-size: 16px; }
+        .pagination-container { display: flex; justify-content: center; align-items: center; margin-top: 20px; gap: 5px; }
+        .page-btn { padding: 6px 12px; background-color: white; border: 1px solid #e2e8f0; border-radius: 4px; color: #4a5568; font-weight: bold; cursor: pointer; }
+        .page-btn.active { background-color: #4a5568; color: white; border-color: #4a5568; pointer-events: none; }
+        .page-btn:disabled { background-color: #edf2f7; color: #a0aec0; cursor: not-allowed; }
+
+        .info-notice-box {
+            background-color: #102a43; color: #ffffff; padding: 15px 18px; border-radius: 6px; font-size: 14px; line-height: 1.7; border-left: 5px solid #ecc94b; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* 🚨 빨간색 점멸(애니메이션) 스타일 */
+        .warn-blink-dot {
+            display: inline-block; width: 14px; height: 14px; background-color: #e53e3e; border-radius: 50%;
+            box-shadow: 0 0 8px #e53e3e; animation: blinker 0.8s linear infinite; vertical-align: middle;
+        }
+        @keyframes blinker {
+            50% { opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-logo-box">
+        <i class="fa-solid fa-shield-halved"></i>
+        <span class="logo-text">수푸자 Sniper</span>
+    </div>
+
+    <h2>
+        <img src="100-4.png" alt="로고" style="height: 60px; width: auto; vertical-align: middle; border-radius: 4px;">
+        진입로 위반차량 검색 시스템
+    </h2>
+    
+    <div class="section" style="background-color: #ebf8ff; display: flex; justify-content: space-between; align-items: center; border-left: 5px solid #2b6cb0; margin-bottom: 12px;">
+        <span style="font-weight: bold; color: #2b6cb0;"><i class="fa-solid fa-building"></i> 수푸자 참교육방</span>
+        <button class="btn-popup-open" onclick="openSearchPopup()"><i class="fa-solid fa-bolt"></i> 미니 입력 팝업창 열기</button>
+    </div>
+
+    <div class="section" style="padding: 0; border: none; background: transparent; margin-bottom: 20px;">
+        <div class="info-notice-box" style="display: flex; flex-direction: column; gap: 10px;">
+            
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <i class="fa-solid fa-circle-info" style="color: #ecc94b; margin-top: 4px; flex-shrink: 0;"></i> 
+                <span>
+                    관리대상은 <span style="color: #48bb78; font-weight: bold;">[차단바 허점을 이용한 무단 통과차량, 후행 차량 적재를 이용한 입차시도 차량, 정기권 만료차량의 상습 입차, 입차 목적에 반하여 장기 체류하는 차량, 방문예약한 듯 속이는 차량, 입주민 행세 차량 등]</span>이 대상이다
+                </span>
+            </div>
+
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <i class="fa-solid fa-circle-info" style="color: #ecc94b; margin-top: 4px; flex-shrink: 0;"></i> 
+                <span>
+                    관리방식은 <span style="color: #48bb78; font-weight: bold;">[주차장 규정 위반차량의 이력관리→입차제한→방문예약→정상입차]</span>를 목표로 한다
+                </span>
+            </div>
+
+            <div style="display: flex; align-items: flex-start; gap: 8px;">
+                <i class="fa-solid fa-circle-question" style="color: #ecc94b; margin-top: 4px; flex-shrink: 0;"></i> 
+                <span>
+                    위반차량에 <span style="color: #48bb78; font-weight: bold;">[질의할 내용은]</span> (<span style="color: #ecc94b; font-weight: bold;">* 일반차여부, * (위반내용), * 방문목적, * 동/호수, * 예상체류시간, * 핸드폰번호, * (차량번호) 이며 [차량걸림 발생시 체크리스트판에 수기 기록후 전자화 한다] </span>)
+                </span>
+            </div>
+
+        </div>
+    </div>
+    <div class="section">
+        <h3>➕ 진입로 위반차량 추가</h3>
+        <div class="form-group">
+            <div class="form-label-group">
+                <label>입차 일시 </label>
+                <div style="display: flex; gap: 4px;">
+                    <input type="date" id="addInDate" style="width:130px; padding: 8px;">
+                    <select id="addInHour" style="padding: 8px; width:65px;"></select>
+                    <select id="addInMin" style="padding: 8px; width:65px;"></select>
+                </div>
+            </div>
+            
+            <div class="form-label-group">
+                <label>구분</label>
+                <div class="radio-group">
+                    <label class="radio-label"><input type="radio" name="addType" value="입주민"> 입주민</label>
+                    <label class="radio-label"><input type="radio" name="addType" value="일반" checked> 일반</label>
+                </div>
+            </div>
+
+            <div class="form-label-group">
+                <label>차량번호</label>
+                <input type="text" id="addCar" placeholder="최대10자" maxlength="10" style="width:130px;">
+            </div>
+            <div class="form-label-group">
+                <label>동</label>
+                <input type="text" id="addDong" placeholder="3자" maxlength="4" style="width:65px;">
+            </div>
+            <div class="form-label-group">
+                <label>호수</label>
+                <input type="text" id="addHo" placeholder="4자" maxlength="5" style="width:65px;">
+            </div>
+            <div class="form-label-group">
+                <label>위반사항 순차적으로 기재</label>
+                <input type="text" id="addNote" placeholder="[위반사항1],[위반사항2],[위반사항3] 등" style="width:320px;">
+            </div>
+            <button class="btn-add" onclick="addData()">추가하기</button>
+        </div>
+    </div>
+
+    <div class="section">
+        <h3>🔍 위반 차량 검색 및 파일 관리</h3>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <input type="text" id="searchInput" class="input-search" onkeyup="searchCar()" placeholder="차량번호 뒤 4자리를 입력하세요" maxlength="4">
+            <div>
+                <button class="btn-backup" onclick="exportToCSV()"><i class="fa-solid fa-download"></i> 데이터 백업 (CSV 저장)</button>
+                <label for="restoreFile" class="file-label"><i class="fa-solid fa-upload"></i> 데이터 복구 (파일 선택)</label>
+                <input type="file" id="restoreFile" accept=".csv" onchange="importFromCSV()" style="display: none;">
+            </div>
+        </div>
+        
+        <table>
+            <thead>
+                <tr>
+                    <th class="col-warn th-warn" onclick="toggleWarnSort()">주의<i id="warnSortIcon" class="fa-solid fa-sort"></i></th>
+                    <th class="col-type">구분</th>
+                    <th class="col-time">입차 일시</th>
+                    <th class="col-time">출차 일시</th>
+                    <th class="col-stay">체류 시간</th>
+                    <th class="col-car">차량번호</th>
+                    <th class="col-dong">동</th>
+                    <th class="col-ho">호수</th>
+                    <th>비고( [위반내용1],[위반내용2],[위반내용3])</th>
+                    <th class="col-action">관리</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody"></tbody>
+        </table>
+        <div id="noResult" class="no-result" style="display:none;">❌ 위반이력이 없습니다</div>
+        <div id="pagination" class="pagination-container"></div>
+    </div>
+
+    <script>
+        const defaultData = [
+            { id: 1, type: "일반", inTime: "2026-05-25 10:30", outTime: "2026-05-25 14:45", number: "123가4567", dong: "101동", ho: "1203호", note: "방문객 장기 주차 등록", isWarn: false },
+            { id: 2, type: "입주민", inTime: "2026-05-24 14:15", outTime: "2026-05-24 15:20", number: "98나7654", dong: "104동", ho: "502호",  note: "입주민 주차증 발급 완료", isWarn: true },
+            { id: 3, type: "일반", inTime: "2026-05-23 09:00", outTime: "", number: "11가1111", dong: "102동", ho: "101호",  note: "상습 불법주차 주의", isWarn: false }
+        ];
+
+        let carData = JSON.parse(localStorage.getItem("carData"));
+        if (!carData || !Array.isArray(carData) || carData.length === 0) {
+            carData = [...defaultData];
+            localStorage.setItem("carData", JSON.stringify(carData));
+        }
+
+        let nextId = carData.length > 0 ? Math.max(...carData.map(item => parseInt(item.id) || 0)) + 1 : 1;
+        let currentPage = 1;       
+        const itemsPerPage = 10;   
+        let currentFilteredData = [...carData]; 
+        let editId = null; 
+        let focusedRecordId = null; 
+        let popupWindow = null;     
+        let isWarnSortActive = false;
+
+        function initDateTimePickers() {
+            const hourSelect = document.getElementById("addInHour");
+            const minSelect = document.getElementById("addInMin");
+            
+            hourSelect.innerHTML = "";
+            minSelect.innerHTML = "";
+
+            for (let h = 0; h < 24; h++) {
+                const hStr = String(h).padStart(2, '0');
+                hourSelect.innerHTML += `<option value="${hStr}">${hStr}시</option>`;
+            }
+            for (let m = 0; m < 60; m++) {
+                const mStr = String(m).padStart(2, '0');
+                minSelect.innerHTML += `<option value="${mStr}">${mStr}분</option>`;
+            }
+
+            const now = new Date();
+            document.getElementById("addInDate").value = now.toISOString().split('T')[0];
+            hourSelect.value = String(now.getHours()).padStart(2, '0');
+            minSelect.value = String(now.getMinutes()).padStart(2, '0');
+        }
+
+        function makeHourMinOptions(selectedVal, isHour) {
+            let options = "";
+            const max = isHour ? 24 : 60;
+            const unit = isHour ? "시" : "분";
+            for (let i = 0; i < max; i++) {
+                const str = String(i).padStart(2, '0');
+                const isSel = str === selectedVal ? "selected" : "";
+                options += `<option value="${str}" ${isSel}>${str}${unit}</option>`;
+            }
+            return options;
+        }
+
+        function calculateStayTime(inStr, outStr) {
+            if (!inStr || !outStr) return "-";
+            const inDate = new Date(inStr.replace(" ", "T"));
+            const outDate = new Date(outStr.replace(" ", "T"));
+            const diffMs = outDate - inDate;
+            
+            if (diffMs < 0 || isNaN(diffMs)) return "오류";
+            
+            const diffMins = Math.floor(diffMs / 60000);
+            const days = Math.floor(diffMins / (24 * 60));
+            const hours = Math.floor((diffMins % (24 * 60)) / 60);
+            const mins = diffMins % 60;
+            
+            let result = "";
+            if (days > 0) result += `${days}일 `;
+            if (hours > 0 || days > 0) result += `${hours}시간 `;
+            result += `${mins}분`;
+            
+            return result;
+        }
+
+        function formatDateTime(dtStr) {
+            if(!dtStr) return "";
+            return dtStr.replace("T", " ").trim();
+        }
+
+        function saveData() { 
+            localStorage.setItem("carData", JSON.stringify(carData)); 
+            // 🚨 데이터가 변동될 때 켜져 있는 미니 팝업창의 2열 5행 실시간 자동 동기화 리프레시
+            if (popupWindow && !popupWindow.closed && typeof popupWindow.updateWarnGrid === "function") {
+                popupWindow.updateWarnGrid();
+            }
+        }
+
+        function sortMainData() {
+            carData.sort((a, b) => {
+                if (isWarnSortActive) {
+                    const warnA = a.isWarn ? 1 : 0;
+                    const warnB = b.isWarn ? 1 : 0;
+                    if (warnB !== warnA) return warnB - warnA; 
+                }
+                const tA = a.inTime || "";
+                const tB = b.inTime || "";
+                if (tB === tA) return (parseInt(b.id) || 0) - (parseInt(a.id) || 0);
+                return tB.localeCompare(tA);
+            });
+        }
+
+        function toggleWarnSort() {
+            isWarnSortActive = !isWarnSortActive;
+            const icon = document.getElementById("warnSortIcon");
+            if (isWarnSortActive) {
+                icon.className = "fa-solid fa-arrow-down-wide-short";
+                icon.style.color = "#fff";
+            } else {
+                icon.className = "fa-solid fa-sort";
+                icon.style.color = "#feb2b2";
+            }
+            searchCar();
+        }
+
+        // 🚨 [크기 규격 고정수정] 가로 6cm(230px), 세로 10cm(380px) 규격으로 미니 팝업창 실행
+        function openSearchPopup() {
+            const popupWidth = 230;
+            const popupHeight = 380;
+            const leftPosition = (window.screen.width / 2) - (popupWidth / 2);
+            const topPosition = (window.screen.height / 2) - (popupHeight / 2);
+
+            popupWindow = window.open(
+                "popup.html", 
+                "carPopup", 
+                `width=${popupWidth},height=${popupHeight},top=${topPosition},left=${leftPosition},toolbar=no,menubar=no,scrollbars=no,resizable=no,location=no,status=no`
+            );
+        }
+
+        function setupPagination(totalItems) {
+            const paginationEl = document.getElementById("pagination");
+            paginationEl.innerHTML = "";
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (totalPages <= 1) return; 
+
+            const prevBtn = document.createElement("button");
+            prevBtn.className = "page-btn"; prevBtn.innerText = "이전";
+            prevBtn.disabled = currentPage === 1;
+            prevBtn.onclick = () => { currentPage--; renderTablePage(); };
+            paginationEl.appendChild(prevBtn);
+
+            for (let i = 1; i <= totalPages; i++) {
+                const pageBtn = document.createElement("button");
+                pageBtn.className = "page-btn" + (i === currentPage ? " active" : "");
+                pageBtn.innerText = i;
+                pageBtn.onclick = () => { currentPage = i; renderTablePage(); };
+                paginationEl.appendChild(pageBtn);
+            }
+
+            const nextBtn = document.createElement("button");
+            nextBtn.className = "page-btn"; nextBtn.innerText = "다음";
+            nextBtn.disabled = currentPage === totalPages;
+            nextBtn.onclick = () => { currentPage++; renderTablePage(); };
+            paginationEl.appendChild(nextBtn);
+        }
+
+        function renderTablePage() {
+            const tbody = document.getElementById("tableBody");
+            tbody.innerHTML = "";
+            const startIndex = (currentPage - 1) * itemsPerPage;
+            const endIndex = startIndex + itemsPerPage;
+            const pageData = currentFilteredData.slice(startIndex, endIndex);
+
+            pageData.forEach(item => {
+                const itemId = parseInt(item.id);
+                const isFocusedRow = (itemId === focusedRecordId) ? "class='row-focus'" : "";
+                const stayTimeText = calculateStayTime(item.inTime, item.outTime);
+                
+                const displayIn = formatDateTime(item.inTime);
+                const displayOut = formatDateTime(item.outTime);
+                
+                const currentType = item.type || "일반";
+                const badgeClass = currentType === "입주민" ? "badge badge-member" : "badge badge-normal";
+                const warnIconHtml = item.isWarn ? `<span class="warn-blink-dot"></span>` : "";
+
+                if (itemId === editId) {
+                    const inParts = item.inTime ? item.inTime.split(" ") : ["", "00:00"];
+                    const inDateVal = inParts[0];
+                    const inTimeVal = inParts[1] ? inParts[1].split(":") : ["00", "00"];
+                    
+                    const outParts = item.outTime ? item.outTime.split(" ") : ["", ""];
+                    const outDateVal = outParts[0] || "";
+                    const outTimeVal = outParts[1] ? outParts[1].split(":") : ["00", "00"];
+
+                    tbody.innerHTML += `<tr>
+                        <td><input type="checkbox" id="editWarn_${itemId}" ${item.isWarn ? 'checked' : ''} style="width:17px; height:17px; cursor:pointer;"></td>
+                        <td>
+                            <div style="display:flex; flex-direction:column; gap:4px; font-size:11px; align-items:center;">
+                                <label style="cursor:pointer;"><input type="radio" name="editType_${itemId}" value="입주민" ${currentType === '입주민' ? 'checked' : ''}> 입주민</label>
+                                <label style="cursor:pointer;"><input type="radio" name="editType_${itemId}" value="일반" ${currentType === '일반' ? 'checked' : ''}> 일반</label>
+                            </div>
+                        </td>
+                        <td class="col-time-edit">
+                            <div class="edit-datetime-container">
+                                <input type="date" id="editInDate_${itemId}" value="${inDateVal}" style="padding:2px; font-size:12px; width:100%;">
+                                <div class="edit-time-selects">
+                                    <select id="editInHour_${itemId}">${makeHourMinOptions(inTimeVal[0], true)}</select>
+                                    <select id="editInMin_${itemId}">${makeHourMinOptions(inTimeVal[1], false)}</select>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="col-time-edit">
+                            <div class="edit-datetime-container">
+                                <input type="date" id="editOutDate_${itemId}" value="${outDateVal}" style="padding:2px; font-size:12px; width:100%;">
+                                <div class="edit-time-selects">
+                                    <select id="editOutHour_${itemId}">
+                                        <option value="">--시--</option>
+                                        ${makeHourMinOptions(outParts[1] ? outTimeVal[0] : "", true)}
+                                    </select>
+                                    <select id="editOutMin_${itemId}">
+                                        <option value="">--분--</option>
+                                        ${makeHourMinOptions(outParts[1] ? outTimeVal[1] : "", false)}
+                                    </select>
+                                </div>
+                            </div>
+                        </td>
+                        <td style="color:#718096;">-</td>
+                        <td><input type="text" id="editCar_${itemId}" class="edit-input" value="${item.number}" maxlength="10"></td>
+                        <td><input type="text" id="editDong_${itemId}" class="edit-input" value="${item.dong}" maxlength="4"></td>
+                        <td><input type="text" id="editHo_${itemId}" class="edit-input" value="${item.ho}" maxlength="5"></td>
+                        <td class="col-note-content"><input type="text" id="editNote_${itemId}" class="edit-input edit-input-note" value="${item.note}"></td>
+                        <td>
+                            <button class="btn-save" onclick="saveEditData(${itemId})">저장</button>
+                            <button class="btn-cancel" onclick="cancelEditMode()">취소</button>
+                        </td>
+                    </tr>`;
+                } else {
+                    tbody.innerHTML += `<tr ${isFocusedRow}>
+                        <td>${warnIconHtml}</td>
+                        <td><span class="${badgeClass}">${currentType}</span></td>
+                        <td>${displayIn}</td> 
+                        <td style="color: ${displayOut ? '#1a202c' : '#e53e3e'}; font-weight: ${displayOut ? 'normal' : 'bold'};">${displayOut || '주차중'}</td> 
+                        <td class="col-stay">${stayTimeText}</td>
+                        <td style="font-weight: bold;">${item.number}</td>
+                        <td>${item.dong}</td> 
+                        <td>${item.ho}</td>
+                        <td class="col-note-content">${item.note}</td>
+                        <td>
+                            <button class="btn-edit" onclick="enableEditMode(${itemId})">수정</button>
+                            <button class="btn-del" onclick="deleteData(${itemId})">삭제</button>
+                        </td>
+                    </tr>`;
+                }
+            });
+            setupPagination(currentFilteredData.length);
+        }
+
+        function searchCar() {
+            const input = document.getElementById("searchInput").value.trim();
+            const noResult = document.getElementById("noResult");
+            const tbody = document.getElementById("tableBody");
+            
+            sortMainData();
+
+            if (input === "") {
+                currentFilteredData = [...carData]; 
+                noResult.style.display = "none";
+            } else {
+                currentFilteredData = carData.filter(item => {
+                    if (!item.number) return false;
+                    const lastFour = item.number.replace(/[^0-9]/g, "").slice(-4); 
+                    return lastFour === input || item.number.slice(-4) === input;
+                });
+                if (currentFilteredData.length > 0) { 
+                    noResult.style.display = "none"; 
+                } else { 
+                    tbody.innerHTML = ""; 
+                    document.getElementById("pagination").innerHTML = ""; 
+                    noResult.style.display = "block"; 
+                    return; 
+                }
+            }
+            const maxPage = Math.ceil(currentFilteredData.length / itemsPerPage) || 1;
+            if (currentPage > maxPage) currentPage = maxPage;
+            renderTablePage();
+        }
+
+        // 🚨 미니 팝업창에서 숫자를 칠 때마다 전달되는 실시간 통신 메시지 리스너 개방
+        window.addEventListener("message", function(event) {
+            if (event.data && event.data.type === "POPUP_SEARCH") {
+                const targetNum = event.data.carNumber;
+                
+                // 팝업창의 입력값을 메인창 검색어 칸에 투영
+                document.getElementById("searchInput").value = targetNum;
+                sortMainData();
+
+                // 4자리가 완전 매칭되는지 체크
+                const foundItem = carData.find(item => {
+                    if (!item.number) return false;
+                    const lastFour = item.number.replace(/[^0-9]/g, "").slice(-4);
+                    return lastFour === targetNum || item.number.slice(-4) === targetNum;
+                });
+
+                if (foundItem) {
+                    focusedRecordId = parseInt(foundItem.id); 
+                    const globalIndex = carData.findIndex(item => parseInt(item.id) === focusedRecordId);
+                    if (globalIndex > -1) {
+                        currentPage = Math.floor(globalIndex / itemsPerPage) + 1;
+                    }
+                    searchCar();
+                    
+                    // 8초간 주황색 반전 로직 작동 후 해제
+                    setTimeout(() => { focusedRecordId = null; renderTablePage(); }, 8000);
+                } else {
+                    searchCar();
+                }
+            }
+        });
+
+        function addData() {
+            const dateVal = document.getElementById("addInDate").value;
+            const hourVal = document.getElementById("addInHour").value;
+            const minVal = document.getElementById("addInMin").value;
+            
+            if(!dateVal) { alert("입차 날짜를 선택해주세요."); return; }
+            const inTime = `${dateVal} ${hourVal}:${minVal}`;
+            
+            const type = document.querySelector('input[name="addType"]:checked').value;
+            const number = document.getElementById("addCar").value.trim();
+            const dong = document.getElementById("addDong").value.trim();
+            const ho = document.getElementById("addHo").value.trim();
+            const note = document.getElementById("addNote").value.trim();
+            
+            if (!number) { alert("차량번호는 필수 입력입니다."); return; }
+            
+            carData.push({ id: nextId++, type, inTime, outTime: "", number, dong, ho, note, isWarn: false });
+            
+            sortMainData();
+            saveData(); // 고유 저장 및 팝업창 동기화 리프레시 포함
+            
+            document.getElementById("addCar").value = ""; 
+            document.getElementById("addDong").value = "";
+            document.getElementById("addHo").value = ""; 
+            document.getElementById("addNote").value = "";
+            document.querySelector('input[name="addType"][value="일반"]').checked = true;
+            
+            initDateTimePickers(); 
+            currentPage = 1; 
+            searchCar();
+        }
+
+        function enableEditMode(id) { editId = parseInt(id); renderTablePage(); }
+        function cancelEditMode() { editId = null; renderTablePage(); }
+
+        function saveEditData(id) {
+            const targetId = parseInt(id);
+            const dateIn = document.getElementById(`editInDate_${targetId}`).value;
+            const hourIn = document.getElementById(`editInHour_${targetId}`).value;
+            const minIn = document.getElementById(`editInMin_${targetId}`).value;
+            
+            if(!dateIn) { alert("입차일시는 필수 항목입니다."); return; }
+            const editIn = `${dateIn} ${hourIn}:${minIn}`;
+
+            const dateOut = document.getElementById(`editOutDate_${targetId}`).value;
+            const hourOut = document.getElementById(`editOutHour_${targetId}`).value;
+            const minOut = document.getElementById(`editOutMin_${targetId}`).value;
+            
+            let editOut = "";
+            if(dateOut && hourOut && minOut) {
+                editOut = `${dateOut} ${hourOut}:${minOut}`;
+            }
+
+            const editType = document.querySelector(`input[name="editType_${targetId}"]:checked`).value;
+            const editCar = document.getElementById(`editCar_${targetId}`).value.trim();
+            const editDong = document.getElementById(`editDong_${targetId}`).value.trim();
+            const editHo = document.getElementById(`editHo_${targetId}`).value.trim();
+            const editNote = document.getElementById(`editNote_${targetId}`).value.trim();
+            const editWarn = document.getElementById(`editWarn_${targetId}`).checked;
+            
+            if (!editCar) { alert("차량번호는 필수 입력입니다."); return; }
+            
+            const idx = carData.findIndex(item => parseInt(item.id) === targetId);
+            if (idx > -1) {
+                carData[idx].inTime = editIn; 
+                carData[idx].outTime = editOut;
+                carData[idx].type = editType;
+                carData[idx].number = editCar;
+                carData[idx].dong = editDong; 
+                carData[idx].ho = editHo; 
+                carData[idx].note = editNote;
+                carData[idx].isWarn = editWarn; 
+                
+                sortMainData(); 
+                saveData(); 
+                editId = null; 
+                searchCar(); 
+                alert("수정이 완료되었습니다.");
+            } else {
+                alert("해당 데이터를 찾을 수 없습니다.");
+            }
+        }
+
+        function deleteData(id) {
+            const targetId = parseInt(id);
+            if (confirm("정말 삭제하시겠습니까?")) { 
+                carData = carData.filter(item => parseInt(item.id) !== targetId); 
+                saveData(); 
+                searchCar(); 
+            }
+        }
+
+        function exportToCSV() {
+            if (carData.length === 0) return;
+            sortMainData(); 
+            let csvContent = "주의여부,구분,입차일시,출차일시,체류시간,차량번호,동,호수,비고\n";
+            carData.forEach(item => { 
+                const stay = calculateStayTime(item.inTime, item.outTime);
+                const safeNote = item.note ? item.note.replace(/\r?\n|\r/g, " ").replace(/"/g, '""') : "";
+                csvContent += `${item.isWarn ? 'Y' : 'N'},${item.type || '일반'},${formatDateTime(item.inTime)},${formatDateTime(item.outTime)},${stay},${item.number || ''},${item.dong || ''},${item.ho || ''},"${safeNote}"\n`; 
+            });
+            
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const date = String(now.getDate()).padStart(2, '0');
+            const hour = String(now.getHours()).padStart(2, '0');
+            const min = String(now.getMinutes()).padStart(2, '0');
+            const sec = String(now.getSeconds()).padStart(2, '0');
+            
+            const fileName = `진입로 위반차량_${year}${month}${date}_${hour}${min}${sec}.csv`;
+
+            const BOM = "\uFEFF";
+            const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+            const link = document.createElement("a");
+            link.setAttribute("href", URL.createObjectURL(blob)); 
+            link.setAttribute("download", fileName); 
+            document.body.appendChild(link); 
+            link.click(); 
+            document.body.removeChild(link);
+        }
+
+        // 1. 화면에 입출차 일시를 보여주는 함수 (연도 누락 방지 강화)
+function formatDateTime(dtStr) {
+    if (!dtStr || dtStr === "-" || dtStr.includes("주차중")) return "";
+    let cleanStr = dtStr.replace("T", " ").trim();
+    
+    // 만약 연도 4자리가 없다면 자동으로 앞단에 올해 연도 붙여서 출력
+    if (cleanStr.length > 0 && !cleanStr.startsWith("20")) {
+        const curYear = new Date().getFullYear();
+        if (/^\d{2}-\d{2}/.test(cleanStr)) {
+            cleanStr = `${curYear}-${cleanStr}`;
+        }
+    }
+    return cleanStr;
+}
+
+// 2. 체류 시간을 계산하는 함수 (날짜 형식 불일치 시 방어벽 구축)
+function calculateStayTime(inStr, outStr) {
+    if (!inStr || !outStr || outStr.includes("주차중") || outStr === "-") return "-";
+    
+    // 포맷 정제
+    let cleanIn = formatDateTime(inStr).replace(/-/g, "/");
+    let cleanOut = formatDateTime(outStr).replace(/-/g, "/");
+
+    const inDate = new Date(cleanIn);
+    const outDate = new Date(cleanOut);
+    const diffMs = outDate - inDate;
+    
+    if (diffMs < 0 || isNaN(diffMs)) return "계산오류"; // 포맷 오류 시 글자 깨짐 방지
+    
+    const diffMins = Math.floor(diffMs / 60000);
+    const days = Math.floor(diffMins / (24 * 60));
+    const hours = Math.floor((diffMins % (24 * 60)) / 60);
+    const mins = diffMins % 60;
+    
+    let result = "";
+    if (days > 0) result += `${days}일 `;
+    if (hours > 0 || days > 0) result += `${hours}시간 `;
+    result += `${mins}분`;
+    
+    return result;
+}
+
+// 3. 문제의 복구 함수 (예외처리 100% 철벽 보강 버전)
+function importFromCSV() {
+    const fileInput = document.getElementById("restoreFile");
+    const file = fileInput.files[0]; 
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const text = e.target.result;
+            const lines = text.split(/\r?\n/); 
+            const newData = []; 
+            let tId = 1;
+
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim(); 
+                if (!line) continue;
+
+                // 엑셀 변형 CSV 완벽 해독용 정규식 구조 split
+                const matches = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+
+                if (matches.length >= 6) {
+                    const clean = (val) => {
+                        if (!val) return "";
+                        return val.replace(/^"|"$/g, "").replace(/""/g, '"').trim();
+                    };
+
+                    // 각 항목 클리닝 추출
+                    let isWarnVal = clean(matches[0]) === 'Y' || clean(matches[0]) === 'true';
+                    let typeVal = clean(matches[1]) || "일반";
+                    let inTimeVal = clean(matches[2]);
+                    let outTimeVal = clean(matches[3]);
+                    let numVal = clean(matches[5]);
+                    let dongVal = clean(matches[6]);
+                    let hoVal = clean(matches[7]);
+                    let noteVal = clean(matches[8]);
+
+                    // 한글 엑셀 변형 대응 ("오후 2:30" 등 탈락 방지)
+                    if (inTimeVal.includes("오후") || inTimeVal.includes("오전")) {
+                        // 날짜가 이상하게 꼬여 들어오면 오늘 날짜 기반으로 임시 포맷팅하여 에러 차단
+                        const nowStr = new Date().toISOString().split('T')[0];
+                        if(!inTimeVal.includes("-") && !inTimeVal.includes("/")) {
+                            inTimeVal = nowStr + " " + inTimeVal;
+                        }
+                    }
+
+                    // 연도 유실 보정
+                    inTimeVal = formatDateTime(inTimeVal);
+                    outTimeVal = formatDateTime(outTimeVal);
+
+                    if (numVal) {
+                        newData.push({
+                            id: parseInt(tId++), // 🚨 데이터 복구 시 ID를 명확하게 숫자 형태로 고정하여 형식 충돌 원천 차단
+                            isWarn: isWarnVal,
+                            type: typeVal,
+                            inTime: inTimeVal,
+                            outTime: outTimeVal,
+                            number: numVal,
+                            dong: dongVal,
+                            ho: hoVal,
+                            note: noteVal
+                        });
+                    }
+                }
+            }
+
+            if (newData.length > 0) {
+                if (confirm(`성공적으로 데이터를 읽었습니다.\n총 ${newData.length}건의 데이터를 덮어쓰시겠습니까?`)) {
+                    carData = newData; 
+                    nextId = tId; 
+                    sortMainData(); 
+                    saveData(); 
+                    currentPage = 1; 
+                    searchCar(); 
+                    alert("복구가 완벽하게 완료되었습니다!");
+                }
+            } else {
+                alert("알림: 복구할 수 있는 유효한 차량 데이터 형식이 파일에 없습니다.\n백업 원본 파일이 맞는지 확인해 주세요.");
+            }
+        } catch (err) {
+            alert("파일 해석 중 치명적 오류 발생: " + err.message);
+        } finally {
+            fileInput.value = ""; // 파일 선택 초기화 (다시 누를 수 있게)
+        }
+    };
+    reader.readAsText(file, "utf-8");
+}
+
+        initDateTimePickers();
+        searchCar();
+
+        setTimeout(() => {
+            const moveInputs = [
+                document.getElementById("addCar"),
+                document.getElementById("addDong"),
+                document.getElementById("addHo"),
+                document.getElementById("addNote")
+            ];
+
+            moveInputs.forEach((input, index) => {
+                if (!input) return;
+
+                input.addEventListener('keydown', function(e) {
+                    const length = input.value.length;
+                    const start = input.selectionStart;
+                    const end = input.selectionEnd;
+
+                    if (e.key === 'ArrowLeft') {
+                        if (start === 0 || start === null) {
+                            if (index > 0) {
+                                moveInputs[index - 1].focus();
+                                setTimeout(() => {
+                                    const len = moveInputs[index - 1].value.length;
+                                    moveInputs[index - 1].setSelectionRange(len, len);
+                                }, 0);
+                                e.preventDefault();
+                            }
+                        }
+                    }
+                    
+                    if (e.key === 'ArrowRight') {
+                        if (end === length || end === null) {
+                            if (index < moveInputs.length - 1) {
+                                moveInputs[index + 1].focus();
+                                e.preventDefault();
+                            }
+                        }
+                    }
+                });
+            });
+        }, 500); 
+    </script>
+</body>
+</html>
