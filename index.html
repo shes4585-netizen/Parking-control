@@ -283,35 +283,8 @@
             return options;
         }
 
-        function calculateStayTime(inStr, outStr) {
-            if (!inStr || !outStr) return "-";
-            const inDate = new Date(inStr.replace(" ", "T"));
-            const outDate = new Date(outStr.replace(" ", "T"));
-            const diffMs = outDate - inDate;
-            
-            if (diffMs < 0 || isNaN(diffMs)) return "오류";
-            
-            const diffMins = Math.floor(diffMs / 60000);
-            const days = Math.floor(diffMins / (24 * 60));
-            const hours = Math.floor((diffMins % (24 * 60)) / 60);
-            const mins = diffMins % 60;
-            
-            let result = "";
-            if (days > 0) result += `${days}일 `;
-            if (hours > 0 || days > 0) result += `${hours}시간 `;
-            result += `${mins}분`;
-            
-            return result;
-        }
-
-        function formatDateTime(dtStr) {
-            if(!dtStr) return "";
-            return dtStr.replace("T", " ").trim();
-        }
-
         function saveData() { 
             localStorage.setItem("carData", JSON.stringify(carData)); 
-            // 🚨 데이터가 변동될 때 켜져 있는 미니 팝업창의 2열 5행 실시간 자동 동기화 리프레시
             if (popupWindow && !popupWindow.closed && typeof popupWindow.updateWarnGrid === "function") {
                 popupWindow.updateWarnGrid();
             }
@@ -344,7 +317,6 @@
             searchCar();
         }
 
-        // 🚨 [크기 규격 고정수정] 가로 6cm(230px), 세로 10cm(380px) 규격으로 미니 팝업창 실행
         function openSearchPopup() {
             const popupWidth = 230;
             const popupHeight = 380;
@@ -486,6 +458,8 @@
             if (input === "") {
                 currentFilteredData = [...carData]; 
                 noResult.style.display = "none";
+                // 🚨 미니 창에서 글자를 완전히 지우면 메인 창의 강조 포커싱도 함께 해제됩니다.
+                focusedRecordId = null; 
             } else {
                 currentFilteredData = carData.filter(item => {
                     if (!item.number) return false;
@@ -506,16 +480,21 @@
             renderTablePage();
         }
 
-        // 🚨 미니 팝업창에서 숫자를 칠 때마다 전달되는 실시간 통신 메시지 리스너 개방
+        // 🚨 미니 입력창(popup.html)에서 넘어오는 실시간 무선 데이터 수신부
         window.addEventListener("message", function(event) {
             if (event.data && event.data.type === "POPUP_SEARCH") {
                 const targetNum = event.data.carNumber;
                 
-                // 팝업창의 입력값을 메인창 검색어 칸에 투영
                 document.getElementById("searchInput").value = targetNum;
                 sortMainData();
 
-                // 4자리가 완전 매칭되는지 체크
+                // 🚨 글자가 지워져 빈 값이 들어왔을 때의 처리
+                if (targetNum === "") {
+                    focusedRecordId = null;
+                    searchCar();
+                    return;
+                }
+
                 const foundItem = carData.find(item => {
                     if (!item.number) return false;
                     const lastFour = item.number.replace(/[^0-9]/g, "").slice(-4);
@@ -530,9 +509,9 @@
                     }
                     searchCar();
                     
-                    // 8초간 주황색 반전 로직 작동 후 해제
-                    setTimeout(() => { focusedRecordId = null; renderTablePage(); }, 8000);
+                    // 🚨 [수정 완결] 기존에 포커싱을 8초 뒤 강제로 풀던 setTimeout 지우기 로직(8000ms)을 영구 삭제했습니다.
                 } else {
+                    focusedRecordId = null;
                     searchCar();
                 }
             }
@@ -557,7 +536,7 @@
             carData.push({ id: nextId++, type, inTime, outTime: "", number, dong, ho, note, isWarn: false });
             
             sortMainData();
-            saveData(); // 고유 저장 및 팝업창 동기화 리프레시 포함
+            saveData();
             
             document.getElementById("addCar").value = ""; 
             document.getElementById("addDong").value = "";
@@ -660,135 +639,125 @@
             document.body.removeChild(link);
         }
 
-        // 1. 화면에 입출차 일시를 보여주는 함수 (연도 누락 방지 강화)
-function formatDateTime(dtStr) {
-    if (!dtStr || dtStr === "-" || dtStr.includes("주차중")) return "";
-    let cleanStr = dtStr.replace("T", " ").trim();
-    
-    // 만약 연도 4자리가 없다면 자동으로 앞단에 올해 연도 붙여서 출력
-    if (cleanStr.length > 0 && !cleanStr.startsWith("20")) {
-        const curYear = new Date().getFullYear();
-        if (/^\d{2}-\d{2}/.test(cleanStr)) {
-            cleanStr = `${curYear}-${cleanStr}`;
+        function formatDateTime(dtStr) {
+            if (!dtStr || dtStr === "-" || dtStr.includes("주차중")) return "";
+            let cleanStr = dtStr.replace("T", " ").trim();
+            
+            if (cleanStr.length > 0 && !cleanStr.startsWith("20")) {
+                const curYear = new Date().getFullYear();
+                if (/^\d{2}-\d{2}/.test(cleanStr)) {
+                    cleanStr = `${curYear}-${cleanStr}`;
+                }
+            }
+            return cleanStr;
         }
-    }
-    return cleanStr;
-}
 
-// 2. 체류 시간을 계산하는 함수 (날짜 형식 불일치 시 방어벽 구축)
-function calculateStayTime(inStr, outStr) {
-    if (!inStr || !outStr || outStr.includes("주차중") || outStr === "-") return "-";
-    
-    // 포맷 정제
-    let cleanIn = formatDateTime(inStr).replace(/-/g, "/");
-    let cleanOut = formatDateTime(outStr).replace(/-/g, "/");
+        function calculateStayTime(inStr, outStr) {
+            if (!inStr || !outStr || outStr.includes("주차중") || outStr === "-") return "-";
+            
+            let cleanIn = formatDateTime(inStr).replace(/-/g, "/");
+            let cleanOut = formatDateTime(outStr).replace(/-/g, "/");
 
-    const inDate = new Date(cleanIn);
-    const outDate = new Date(cleanOut);
-    const diffMs = outDate - inDate;
-    
-    if (diffMs < 0 || isNaN(diffMs)) return "계산오류"; // 포맷 오류 시 글자 깨짐 방지
-    
-    const diffMins = Math.floor(diffMs / 60000);
-    const days = Math.floor(diffMins / (24 * 60));
-    const hours = Math.floor((diffMins % (24 * 60)) / 60);
-    const mins = diffMins % 60;
-    
-    let result = "";
-    if (days > 0) result += `${days}일 `;
-    if (hours > 0 || days > 0) result += `${hours}시간 `;
-    result += `${mins}분`;
-    
-    return result;
-}
+            const inDate = new Date(cleanIn);
+            const outDate = new Date(cleanOut);
+            const diffMs = outDate - inDate;
+            
+            if (diffMs < 0 || isNaN(diffMs)) return "계산오류";
+            
+            const diffMins = Math.floor(diffMs / 60000);
+            const days = Math.floor(diffMins / (24 * 60));
+            const hours = Math.floor((diffMins % (24 * 60)) / 60);
+            const mins = diffMins % 60;
+            
+            let result = "";
+            if (days > 0) result += `${days}일 `;
+            if (hours > 0 || days > 0) result += `${hours}시간 `;
+            result += `${mins}분`;
+            
+            return result;
+        }
 
-// 3. 문제의 복구 함수 (예외처리 100% 철벽 보강 버전)
-function importFromCSV() {
-    const fileInput = document.getElementById("restoreFile");
-    const file = fileInput.files[0]; 
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = function (e) {
-        try {
-            const text = e.target.result;
-            const lines = text.split(/\r?\n/); 
-            const newData = []; 
-            let tId = 1;
+        function importFromCSV() {
+            const fileInput = document.getElementById("restoreFile");
+            const file = fileInput.files[0]; 
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const text = e.target.result;
+                    const lines = text.split(/\r?\n/); 
+                    const newData = []; 
+                    let tId = 1;
 
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim(); 
-                if (!line) continue;
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim(); 
+                        if (!line) continue;
 
-                // 엑셀 변형 CSV 완벽 해독용 정규식 구조 split
-                const matches = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
+                        const matches = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
 
-                if (matches.length >= 6) {
-                    const clean = (val) => {
-                        if (!val) return "";
-                        return val.replace(/^"|"$/g, "").replace(/""/g, '"').trim();
-                    };
+                        if (matches.length >= 6) {
+                            const clean = (val) => {
+                                if (!val) return "";
+                                return val.replace(/^"|"$/g, "").replace(/""/g, '"').trim();
+                            };
 
-                    // 각 항목 클리닝 추출
-                    let isWarnVal = clean(matches[0]) === 'Y' || clean(matches[0]) === 'true';
-                    let typeVal = clean(matches[1]) || "일반";
-                    let inTimeVal = clean(matches[2]);
-                    let outTimeVal = clean(matches[3]);
-                    let numVal = clean(matches[5]);
-                    let dongVal = clean(matches[6]);
-                    let hoVal = clean(matches[7]);
-                    let noteVal = clean(matches[8]);
+                            let isWarnVal = clean(matches[0]) === 'Y' || clean(matches[0]) === 'true';
+                            let typeVal = clean(matches[1]) || "일반";
+                            let inTimeVal = clean(matches[2]);
+                            let outTimeVal = clean(matches[3]);
+                            let numVal = clean(matches[5]);
+                            let dongVal = clean(matches[6]);
+                            let hoVal = clean(matches[7]);
+                            let noteVal = clean(matches[8]);
 
-                    // 한글 엑셀 변형 대응 ("오후 2:30" 등 탈락 방지)
-                    if (inTimeVal.includes("오후") || inTimeVal.includes("오전")) {
-                        // 날짜가 이상하게 꼬여 들어오면 오늘 날짜 기반으로 임시 포맷팅하여 에러 차단
-                        const nowStr = new Date().toISOString().split('T')[0];
-                        if(!inTimeVal.includes("-") && !inTimeVal.includes("/")) {
-                            inTimeVal = nowStr + " " + inTimeVal;
+                            if (inTimeVal.includes("오후") || inTimeVal.includes("오전")) {
+                                const nowStr = new Date().toISOString().split('T')[0];
+                                if(!inTimeVal.includes("-") && !inTimeVal.includes("/")) {
+                                    inTimeVal = nowStr + " " + inTimeVal;
+                                }
+                            }
+
+                            inTimeVal = formatDateTime(inTimeVal);
+                            outTimeVal = formatDateTime(outTimeVal);
+
+                            if (numVal) {
+                                newData.push({
+                                    id: parseInt(tId++),
+                                    isWarn: isWarnVal,
+                                    type: typeVal,
+                                    inTime: inTimeVal,
+                                    outTime: outTimeVal,
+                                    number: numVal,
+                                    dong: dongVal,
+                                    ho: hoVal,
+                                    note: noteVal
+                                });
+                            }
                         }
                     }
 
-                    // 연도 유실 보정
-                    inTimeVal = formatDateTime(inTimeVal);
-                    outTimeVal = formatDateTime(outTimeVal);
-
-                    if (numVal) {
-                        newData.push({
-                            id: parseInt(tId++), // 🚨 데이터 복구 시 ID를 명확하게 숫자 형태로 고정하여 형식 충돌 원천 차단
-                            isWarn: isWarnVal,
-                            type: typeVal,
-                            inTime: inTimeVal,
-                            outTime: outTimeVal,
-                            number: numVal,
-                            dong: dongVal,
-                            ho: hoVal,
-                            note: noteVal
-                        });
+                    if (newData.length > 0) {
+                        if (confirm(`성공적으로 데이터를 읽었습니다.\n총 ${newData.length}건의 데이터를 덮어쓰시겠습니까?`)) {
+                            carData = newData; 
+                            nextId = tId; 
+                            sortMainData(); 
+                            saveData(); 
+                            currentPage = 1; 
+                            searchCar(); 
+                            alert("복구가 완벽하게 완료되었습니다!");
+                        }
+                    } else {
+                        alert("알림: 복구할 수 있는 유효한 차량 데이터 형식이 파일에 없습니다.\n백업 원본 파일이 맞는지 확인해 주세요.");
                     }
+                } catch (err) {
+                    alert("파일 해석 중 치명적 오류 발생: " + err.message);
+                } finally {
+                    fileInput.value = "";
                 }
-            }
-
-            if (newData.length > 0) {
-                if (confirm(`성공적으로 데이터를 읽었습니다.\n총 ${newData.length}건의 데이터를 덮어쓰시겠습니까?`)) {
-                    carData = newData; 
-                    nextId = tId; 
-                    sortMainData(); 
-                    saveData(); 
-                    currentPage = 1; 
-                    searchCar(); 
-                    alert("복구가 완벽하게 완료되었습니다!");
-                }
-            } else {
-                alert("알림: 복구할 수 있는 유효한 차량 데이터 형식이 파일에 없습니다.\n백업 원본 파일이 맞는지 확인해 주세요.");
-            }
-        } catch (err) {
-            alert("파일 해석 중 치명적 오류 발생: " + err.message);
-        } finally {
-            fileInput.value = ""; // 파일 선택 초기화 (다시 누를 수 있게)
+            };
+            reader.readAsText(file, "utf-8");
         }
-    };
-    reader.readAsText(file, "utf-8");
-}
 
         initDateTimePickers();
         searchCar();
