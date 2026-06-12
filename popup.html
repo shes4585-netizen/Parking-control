@@ -38,7 +38,7 @@
         }
         input:focus { outline: none; border-color: #1a365d; } 
         
-        /* 입력창 아래 실시간 매칭 번호 나열 영역 (비고 필드 삭제됨) */
+        /* 입력창 아래 실시간 매칭 번호 나열 영역 */
         .live-match-container { 
             margin-top: 8px; 
             width: 100%; 
@@ -125,7 +125,7 @@
     </div>
 
     <script>
-        let resetTimeout = null; 
+        // 🚨 자동 초기화 타이머(resetTimeout) 관련 로직 전면 제거됨
 
         // 🚨 [크기 강제 교정] 브라우저 창틀 크기를 계산하여 내부 화면 영역을 정확히 가로 230px, 세로 380px로 세팅
         function enforceWindowSize() {
@@ -151,20 +151,17 @@
             const carNum = inputField.value;
 
             const matchArea = document.getElementById("liveMatchArea");
-            
-            if(resetTimeout) { clearTimeout(resetTimeout); resetTimeout = null; }
 
             // 🚨 부모 메인창(index.html)으로 실시간 동기화 문자 전송
             if (window.opener) {
                 window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: carNum }, "*");
             }
 
-            // 🚨 [보정 추가] 글자가 아예 없을 때 깃허브 딜레이로 잔상 남는 현상 방지
             if (carNum.length === 0) {
                 matchArea.innerHTML = "";
                 document.getElementById("sirenImg").src = "100.png";
                 
-                // 0.01초 뒤에 한 번 더 확실하게 메인창을 공백으로 밀어버림 (잔상 파괴)
+                // 🚨 깃허브 타이밍 지연(잔상) 방지 코드 적용
                 setTimeout(() => {
                     if (window.opener) {
                         window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: "" }, "*");
@@ -188,7 +185,6 @@
 
             // 매칭 결과 화면 표출 로직
             if (matches.length === 0) {
-                // 🚨 일치 항목이 전혀 없으면 "매칭 이력없음" 출력
                 matchArea.innerHTML = `<span style="color: #718096;">매칭 이력없음</span>`;
                 document.getElementById("sirenImg").src = "100.png";
             } else {
@@ -200,11 +196,9 @@
                     const isWarnCar = (item.isWarn === true || item.isWarn === "true" || item.isWarn === "Y" || item.isWarn === "yes");
                     
                     if (isWarnCar) {
-                        // 🚨 주의가 yes인 경우 빨간색 점멸 글씨 처리
                         matchArea.innerHTML += `<span class="blink-warn">${lastFour}</span> `;
                         hasWarn = true;
                     } else {
-                        // 주의가 아닌 일반 차량 번호 시인성 있게 출력
                         matchArea.innerHTML += `<span class="normal-match">${lastFour}</span> `;
                     }
                 });
@@ -215,21 +209,8 @@
                     document.getElementById("sirenImg").src = "100.png";
                 }
             }
-
-            // 4자리가 가득 차면 4초 뒤 입력란 및 매칭 영역을 대기상태로 클리어
-            if (carNum.length === 4) {
-                resetTimeout = setTimeout(() => {
-                    inputField.value = "";
-                    matchArea.innerHTML = "";
-                    document.getElementById("sirenImg").src = "100.png";
-                    inputField.focus();
-                    
-                    // 🚨 4초 자동 초기화 시점에도 메인창(index.html) 검색 조건을 초기화(모든 레코드 노출) 시킵니다.
-                    if (window.opener) {
-                        window.opener.postMessage({ type: "POPUP_SEARCH", carNumber: "" }, "*");
-                    }
-                }, 4000); 
-            }
+            
+            // 🚨 기존에 존재하던 4글자 만족 시 4초 후 강제 초기화(Clear) 하던 setTimeout 구문 전체 영구 삭제 완료
         }
 
         // 🚨 최하단에 주의 필드가 yes인 목록을 테두리 없이 2열 5행 판으로 채워주는 함수
@@ -237,7 +218,6 @@
             let localData = [];
             try { localData = JSON.parse(localStorage.getItem("carData")) || []; } catch(e) {}
 
-            // 주의 필드가 true/yes/Y 인 항목만 걸러내어 최신등록 순 정렬
             const warnCars = localData.filter(item => {
                 return item.isWarn === true || item.isWarn === "true" || item.isWarn === "Y" || item.isWarn === "yes";
             }).reverse();
@@ -253,7 +233,6 @@
                     
                     if (dataIndex < warnCars.length) {
                         const lastFour = warnCars[dataIndex].number.replace(/[^0-9]/g, "").slice(-4);
-                        // 빨간 구슬(🔴) 말머리와 함께 번호 안착
                         td.innerHTML = `<span class="bead">🔴</span>${lastFour}`;
                         dataIndex++;
                     } else {
